@@ -1,0 +1,58 @@
+name: Build Offline Package (py310 + py312)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.12']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Download wheels for ${{ matrix.python-version }}
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path wheelhouse
+          # 把 3.10 转成 "310"，3.12 转成 "312"
+          $ver = "${{ matrix.python-version }}".Replace(".", "")
+          python -m pip download -r requirements.txt -d wheelhouse `
+            --platform win_amd64 `
+            --python-version $ver `
+            --only-binary=:all:
+
+      - name: Upload wheels for ${{ matrix.python-version }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.python-version }}
+          path: wheelhouse/
+
+  package:
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Merge all wheels
+        uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          path: wheelhouse
+          merge-multiple: true
+
+      - name: Bundle project and wheelhouse
+        run: Compress-Archive -Path .\* -DestinationPath offline-package.zip -Force
+
+      - name: Upload final artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: offline-package-win10-py310-312
+          path: offline-package.zip
