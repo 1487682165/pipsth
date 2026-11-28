@@ -1,4 +1,4 @@
-name: Build Offline Package (PyMySQL)
+name: Build Offline Package (pypinyin)
 
 on:
   workflow_dispatch:
@@ -17,12 +17,12 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path wheelhouse
-          python -m pip download PyMySQL -d wheelhouse --only-binary=:all:
+          python -m pip download pypinyin -d wheelhouse --only-binary=:all:
 
       - name: Bundle
         run: Compress-Archive -Path .\* -DestinationPath offline-package.zip -Force
 
       - uses: actions/upload-artifact@v4
         with:
-          name: offline-package-pymysql
+          name: offline-package-pypinyin
           path: offline-package.zip
