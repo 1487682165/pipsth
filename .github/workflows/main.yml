@@ -1,4 +1,4 @@
-name: Build Offline Package (py310 + py312)
+name: Build Offline Package (PyMySQL)
 
 on:
   workflow_dispatch:
@@ -6,53 +6,23 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ['3.10', '3.12']
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v6
+      - uses: actions/setup-python@v6
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.10'   # 纯 Python 包，用哪个版本下载都一样
 
-      - name: Download wheels for ${{ matrix.python-version }}
+      - name: Download wheels
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path wheelhouse
-          $ver = "${{ matrix.python-version }}".Replace(".", "")
-          python -m pip download requests pandas openpyxl APScheduler -d wheelhouse `
-            --platform win_amd64 `
-            --python-version $ver `
-            --only-binary=:all:
+          python -m pip download PyMySQL -d wheelhouse --only-binary=:all:
 
-      - name: Upload wheels for ${{ matrix.python-version }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: wheels-${{ matrix.python-version }}
-          path: wheelhouse/
-
-  package:
-    needs: build
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Merge all wheels
-        uses: actions/download-artifact@v4
-        with:
-          pattern: wheels-*
-          path: wheelhouse
-          merge-multiple: true
-
-      - name: Bundle project and wheelhouse
+      - name: Bundle
         run: Compress-Archive -Path .\* -DestinationPath offline-package.zip -Force
 
-      - name: Upload final artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: offline-package-win10-py310-312
+          name: offline-package-pymysql
           path: offline-package.zip
